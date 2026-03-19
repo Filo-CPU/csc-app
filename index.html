@@ -66,6 +66,14 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
     </div>
 
     <button onclick="clearForm()" class="bg-red-600 mt-3 w-full py-2 rounded">Очистить</button>
+
+    <!-- СПИСКИ -->
+    <h3 class="mt-6 font-bold">Опубликованные</h3>
+    <div id="adminPublished" class="grid grid-cols-2 gap-2"></div>
+
+    <h3 class="mt-6 font-bold">Черновики</h3>
+    <div id="adminDrafts" class="grid grid-cols-2 gap-2"></div>
+
 </div>
 
 <script>
@@ -75,7 +83,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyIhcHgJwn8VFtDiu5rSJBs
 let ALL_HEROES = JSON.parse(localStorage.getItem("heroes_cache") || "[]");
 let currentHeroId = null;
 
-// ПЕРЕКЛЮЧЕНИЕ СТРАНИЦ
+// ПЕРЕКЛЮЧЕНИЕ
 function showPage(page) {
     document.getElementById("heroesPage").classList.add("hidden");
     document.getElementById("adminPage").classList.add("hidden");
@@ -89,7 +97,7 @@ function showPage(page) {
 // ПОИСК
 document.getElementById("search").addEventListener("input", renderHeroes);
 
-// РЕНДЕР
+// РЕНДЕР ГЕРОЕВ
 function renderHeroes() {
 
     const list = document.getElementById("heroesPage");
@@ -115,17 +123,52 @@ function renderHeroes() {
             </div>
         `;
     });
+}
 
-    if (filtered.length === 0) {
-        list.innerHTML = `<p class="text-center col-span-2 text-gray-400">Ничего не найдено</p>`;
-    }
+// АДМИН СПИСКИ
+function renderAdminLists() {
+
+    const pub = document.getElementById("adminPublished");
+    const draft = document.getElementById("adminDrafts");
+
+    pub.innerHTML = "";
+    draft.innerHTML = "";
+
+    ALL_HEROES.forEach(hero => {
+
+        const card = `
+            <div onclick="editHero(${hero.id})"
+                 class="glass p-2 text-center text-sm cursor-pointer">
+                ${hero.name || "Без имени"}
+            </div>
+        `;
+
+        if (hero.status === "published") pub.innerHTML += card;
+        else draft.innerHTML += card;
+    });
+}
+
+// РЕДАКТИРОВАНИЕ
+function editHero(id) {
+
+    const hero = ALL_HEROES.find(h => h.id == id);
+    if (!hero) return;
+
+    currentHeroId = hero.id;
+
+    document.getElementById("h_name").value = hero.name || "";
+    document.getElementById("h_class").value = hero.class_type || "";
+    document.getElementById("h_hp").value = hero.hp || "";
+    document.getElementById("h_dmg").value = hero.damage || "";
+    document.getElementById("h_magic").value = hero.magic || "";
+    document.getElementById("h_icon").value = hero.icon || "";
+    document.getElementById("h_ability").value = hero.ability_name || "";
+    document.getElementById("h_video").value = hero.video || "";
+    document.getElementById("h_desc").value = hero.desc || "";
 }
 
 // ЗАГРУЗКА
 async function loadHeroes() {
-
-    const loading = document.getElementById("loading");
-    if (loading) loading.style.display = "block";
 
     try {
         const res = await fetch(API_URL);
@@ -133,30 +176,28 @@ async function loadHeroes() {
 
         localStorage.setItem("heroes_cache", JSON.stringify(ALL_HEROES));
 
-    } catch (e) {
-        console.log("Ошибка загрузки, используем кэш");
-    }
-
-    if (loading) loading.style.display = "none";
+    } catch {}
 
     renderHeroes();
+    renderAdminLists();
 }
-
-// ФОНОВАЯ ОБНОВА
-fetch(API_URL)
-.then(res => res.json())
-.then(data => {
-    ALL_HEROES = data;
-    localStorage.setItem("heroes_cache", JSON.stringify(data));
-    renderHeroes();
-});
 
 // СОХРАНЕНИЕ
 async function saveHero(status) {
 
+    let name = document.getElementById("h_name").value;
+
+    // 🔥 защита от дублей по имени
+    if (!currentHeroId) {
+        const exists = ALL_HEROES.find(h => h.name === name);
+        if (exists) {
+            currentHeroId = exists.id;
+        }
+    }
+
     const payload = {
         id: currentHeroId || Date.now(),
-        name: document.getElementById("h_name").value,
+        name: name,
         class_type: document.getElementById("h_class").value,
         hp: document.getElementById("h_hp").value,
         damage: document.getElementById("h_dmg").value,
@@ -168,29 +209,24 @@ async function saveHero(status) {
         status: status
     };
 
-    try {
-        await fetch(API_URL, {
-            method: "POST",
-            mode: "no-cors",
-            body: JSON.stringify(payload)
-        });
+    await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify(payload)
+    });
 
-        currentHeroId = payload.id;
+    currentHeroId = payload.id;
 
-        alert("Сохранено!");
+    alert("Сохранено");
 
-        clearForm();
-        ALL_HEROES = [];
-        loadHeroes();
-
-    } catch (err) {
-        alert("Ошибка: " + err);
-    }
+    ALL_HEROES = [];
+    loadHeroes();
 }
 
 // ОЧИСТКА
 function clearForm() {
-    document.querySelectorAll("input, textarea").forEach(el => el.value = "");
+    document.querySelectorAll("#adminPage input, #adminPage textarea")
+        .forEach(el => el.value = "");
     currentHeroId = null;
 }
 
@@ -202,13 +238,9 @@ loadHeroes();
 
 <!-- НИЖНЕЕ МЕНЮ -->
 <div class="fixed bottom-0 left-0 right-0 bg-[#020617] border-t border-slate-800 flex justify-around p-2">
-
     <button onclick="showPage('heroes')" class="text-cyan-400">Герои</button>
-
     <button onclick="showPage('discuss')" class="text-gray-400">Обсуждение</button>
-
     <button onclick="showPage('admin')" class="text-red-400">Админ</button>
-
 </div>
 
 </body>
