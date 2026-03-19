@@ -28,22 +28,25 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
 <!-- HEADER -->
 <div class="flex justify-between items-center mb-4">
     <h1 class="text-xl font-bold text-cyan-400">CSC Heroes</h1>
-    <button id="adminBtn" class="hidden bg-red-500 px-3 py-1 rounded">ADMIN</button>
 </div>
 
 <!-- SEARCH -->
 <input id="search" placeholder="Поиск героя..." class="input mb-4">
 
 <!-- HERO LIST -->
-<div id="heroesPage" class="grid grid-cols-2 gap-3"></div>
+<div id="heroesPage" class="grid grid-cols-2 gap-3">
+    <p id="loading" class="col-span-2 text-center text-gray-400">
+        Загрузка героев...
+    </p>
+</div>
 
+<!-- DISCUSS -->
 <div id="discussPage" class="hidden text-center mt-10 text-gray-400">
     В разработке 🚧
 </div>
-    
-<!-- ADMIN PAGE -->
-<div id="adminPage" class="hidden">
 
+<!-- ADMIN -->
+<div id="adminPage" class="hidden">
     <h2 class="text-lg font-bold mb-4">Админ панель</h2>
 
     <input id="h_name" class="input mb-2" placeholder="Имя">
@@ -65,60 +68,61 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
 </div>
 
 <script>
-let ALL_HEROES = [];
-    
-function showPage(page) {
+const API_URL = "https://script.google.com/macros/s/AKfycbyIhcHgJwn8VFtDiu5rSJBsNX18BM7zTEeXTr3-d8svz3WzNouV8lAAxnjZOXDIERut/exec";
 
+// ✅ КЭШ
+let ALL_HEROES = JSON.parse(localStorage.getItem("heroes_cache") || "[]");
+
+// переключение страниц
+function showPage(page) {
     document.getElementById("heroesPage").classList.add("hidden");
     document.getElementById("adminPage").classList.add("hidden");
     document.getElementById("discussPage").classList.add("hidden");
 
-    if (page === "heroes") {
-        document.getElementById("heroesPage").classList.remove("hidden");
-    }
-
-    if (page === "admin") {
-        document.getElementById("adminPage").classList.remove("hidden");
-    }
-
-    if (page === "discuss") {
-        document.getElementById("discussPage").classList.remove("hidden");
-    }
+    if (page === "heroes") document.getElementById("heroesPage").classList.remove("hidden");
+    if (page === "admin") document.getElementById("adminPage").classList.remove("hidden");
+    if (page === "discuss") document.getElementById("discussPage").classList.remove("hidden");
 }
-    
-const API_URL = "https://script.google.com/macros/s/AKfycbyIhcHgJwn8VFtDiu5rSJBsNX18BM7zTEeXTr3-d8svz3WzNouV8lAAxnjZOXDIERut/exec";
-
-// переключение страниц
-document.getElementById("adminBtn").onclick = () => {
-    document.getElementById("heroesPage").classList.add("hidden");
-    document.getElementById("adminPage").classList.remove("hidden");
-};
 
 // поиск
-document.getElementById("search").addEventListener("input", loadHeroes);
+document.getElementById("search").addEventListener("input", renderHeroes);
 
-// загрузка героев
+// загрузка данных
 async function loadHeroes() {
+    const loading = document.getElementById("loading");
 
-    // загружаем только 1 раз
-    if (ALL_HEROES.length === 0) {
-        const res = await fetch(API_URL);
-        ALL_HEROES = await res.json();
+    // если есть кэш → сразу показываем
+    if (ALL_HEROES.length > 0) {
+        renderHeroes();
     }
 
+    try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+
+        ALL_HEROES = data;
+        localStorage.setItem("heroes_cache", JSON.stringify(data));
+
+        renderHeroes();
+
+    } catch (e) {
+        console.error("Ошибка загрузки:", e);
+    }
+
+    if (loading) loading.style.display = "none";
+}
+
+// рендер
+function renderHeroes() {
     const list = document.getElementById("heroesPage");
     list.innerHTML = "";
 
     const search = document.getElementById("search").value.toLowerCase();
 
     let filtered = ALL_HEROES.filter(hero => {
-
         const name = (hero.name || "").toLowerCase();
-
         if (!name) return false;
-
         if (search === "") return true;
-
         return name.startsWith(search);
     });
 
@@ -138,9 +142,9 @@ async function loadHeroes() {
         list.innerHTML = `<p class="text-center col-span-2 text-gray-400">Ничего не найдено</p>`;
     }
 }
-// сохранение героя
-async function saveHero(status) {
 
+// сохранение
+async function saveHero(status) {
     const payload = {
         id: Date.now(),
         name: document.getElementById("h_name").value,
@@ -158,20 +162,21 @@ async function saveHero(status) {
     try {
         await fetch(API_URL, {
             method: "POST",
-            mode: "no-cors", // 👈 ВАЖНО
+            mode: "no-cors",
             body: JSON.stringify(payload)
         });
 
-        alert("Отправлено! Проверь таблицу");
+        alert("Сохранено!");
 
         clearForm();
-        ALL_HEROES = []; // сброс кэша
+        ALL_HEROES = [];
         loadHeroes();
 
     } catch (err) {
         alert("Ошибка: " + err);
     }
 }
+
 // очистка
 function clearForm() {
     document.querySelectorAll("input, textarea").forEach(el => el.value = "");
@@ -181,15 +186,12 @@ function clearForm() {
 loadHeroes();
 </script>
 
+<!-- НАВИГАЦИЯ -->
 <div class="fixed bottom-0 left-0 right-0 bg-[#020617] border-t border-slate-800 flex justify-around p-2">
-
     <button onclick="showPage('heroes')" class="text-cyan-400">Герои</button>
-
     <button onclick="showPage('discuss')" class="text-gray-400">Обсуждение</button>
-
     <button onclick="showPage('admin')" class="text-red-400">Админ</button>
-
 </div>
-    
+
 </body>
 </html>
