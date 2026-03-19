@@ -185,9 +185,8 @@ async function loadHeroes() {
 // СОХРАНЕНИЕ
 async function saveHero(status) {
 
-    // если это новый герой → id пока null
     const payload = {
-        id: currentHeroId, // 👈 ВАЖНО (убрали Date.now)
+        id: currentHeroId, // null если новый
         name: document.getElementById("h_name").value,
         class_type: document.getElementById("h_class").value,
         hp: document.getElementById("h_hp").value,
@@ -201,21 +200,23 @@ async function saveHero(status) {
     };
 
     try {
-        const res = await fetch(API_URL, {
+        await fetch(API_URL, {
             method: "POST",
             mode: "no-cors",
             body: JSON.stringify(payload)
         });
 
-        // 👇 ВАЖНО: фиксируем ID после первого сохранения
-        if (!currentHeroId) {
-            currentHeroId = Date.now(); // временно, сервер всё равно заменит
-        }
-
         alert("Сохранено");
 
+        // ❗ ВАЖНО: ПЕРЕЗАГРУЗКА ДАННЫХ
         ALL_HEROES = [];
-        loadHeroes();
+        await loadHeroes();
+
+        // ❗ ВАЖНО: найти созданного героя и взять его ID
+        const lastHero = ALL_HEROES[ALL_HEROES.length - 1];
+        if (lastHero) {
+            currentHeroId = lastHero.id;
+        }
 
     } catch (err) {
         alert("Ошибка: " + err);
