@@ -218,8 +218,8 @@ async function saveHero(status) {
             body: JSON.stringify(payload)
         });
 
-        const data = await res.json();
-
+        const data = await res.json(); // теперь JSON точно получаем
+        
         // 🔥 ВОТ КЛЮЧ
         if (data.id) {
             currentHeroId = data.id;
