@@ -106,9 +106,16 @@ function renderHeroes() {
     const search = document.getElementById("search").value.toLowerCase();
 
     let filtered = ALL_HEROES.filter(hero => {
+
         const name = (hero.name || "").toLowerCase();
+
+        // ❗ показываем ТОЛЬКО опубликованные
+        if (hero.status !== "published") return false;
+
         if (!name) return false;
+
         if (search === "") return true;
+
         return name.startsWith(search);
     });
 
@@ -123,8 +130,11 @@ function renderHeroes() {
             </div>
         `;
     });
-}
 
+    if (filtered.length === 0) {
+        list.innerHTML = `<p class="text-center col-span-2 text-gray-400">Ничего не найдено</p>`;
+    }
+}
 // АДМИН СПИСКИ
 function renderAdminLists() {
 
