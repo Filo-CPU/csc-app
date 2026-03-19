@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSC Encyclopedia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #0f172a; color: white; font-family: sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="p-4">
+    <div id="app">
+        <h1 class="text-2xl font-bold mb-6 text-cyan-400 text-center">Custom Steve Chaos</h1>
+        
+        <div id="hero-list" class="grid grid-cols-2 gap-4">
+            <p class="col-span-2 text-center text-gray-400">Загрузка персонажей...</p>
+        </div>
+    </div>
+
+    <script>
+        // ТВОЯ ССЫЛКА ИЗ GOOGLE SCRIPTS
+        const API_URL = "https://script.google.com/macros/s/AKfycbyIhcHgJwn8VFtDiu5rSJBsNX18BM7zTEeXTr3-d8svz3WzNouV8lAAxnjZOXDIERut/exec";
+
+        async function loadHeroes() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                const list = document.getElementById('hero-list');
+                list.innerHTML = '';
+
+                data.forEach(hero => {
+                    // Показываем только тех, у кого статус "Опубликовано"
+                    if(hero.Статус === "Опубликовано") {
+                        list.innerHTML += `
+                            <div class="glass p-3 rounded-xl text-center" onclick="alert('Открываем: ${hero.Имя}')">
+                                <img src="${hero.Иконка_URL}" class="w-16 h-16 mx-auto rounded-lg mb-2 shadow-lg shadow-cyan-500/20">
+                                <div class="font-bold text-sm">${hero.Имя}</div>
+                                <div class="text-[10px] text-cyan-300 uppercase">${hero.Класс}</div>
+                            </div>
+                        `;
+                    }
+                });
+            } catch (e) {
+                console.error("Ошибка загрузки:", e);
+            }
+        }
+
+        loadHeroes();
+    </script>
+</body>
+</html>
