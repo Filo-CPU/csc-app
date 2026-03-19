@@ -186,7 +186,7 @@ async function loadHeroes() {
 async function saveHero(status) {
 
     const payload = {
-        id: currentHeroId, // null если новый
+        id: currentHeroId,
         name: document.getElementById("h_name").value,
         class_type: document.getElementById("h_class").value,
         hp: document.getElementById("h_hp").value,
@@ -200,23 +200,24 @@ async function saveHero(status) {
     };
 
     try {
-        await fetch(API_URL, {
+        const res = await fetch(API_URL, {
             method: "POST",
-            mode: "no-cors",
+            headers: {
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify(payload)
         });
 
-        alert("Сохранено");
+        const data = await res.json();
 
-        // ❗ ВАЖНО: ПЕРЕЗАГРУЗКА ДАННЫХ
-        ALL_HEROES = [];
-        await loadHeroes();
-
-        // ❗ ВАЖНО: найти созданного героя и взять его ID
-        const lastHero = ALL_HEROES[ALL_HEROES.length - 1];
-        if (lastHero) {
-            currentHeroId = lastHero.id;
+        // 🔥 ВОТ КЛЮЧ
+        if (data.id) {
+            currentHeroId = data.id;
         }
+
+        alert("Сохранено: " + data.status);
+
+        await loadHeroes();
 
     } catch (err) {
         alert("Ошибка: " + err);
