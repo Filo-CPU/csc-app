@@ -86,18 +86,6 @@ function showPage(page) {
     
 const API_URL = "https://script.google.com/macros/s/AKfycbyIhcHgJwn8VFtDiu5rSJBsNX18BM7zTEeXTr3-d8svz3WzNouV8lAAxnjZOXDIERut/exec";
 
-if (!USER_ID) {
-    USER_ID = prompt("2114339294");
-    localStorage.setItem("user_id", USER_ID);
-}
-
-const isAdmin = USER_ID === ADMIN_ID;
-
-// показать кнопку админа
-if (isAdmin) {
-    document.getElementById("adminBtn").classList.remove("hidden");
-}
-
 // переключение страниц
 document.getElementById("adminBtn").onclick = () => {
     document.getElementById("heroesPage").classList.add("hidden");
@@ -112,6 +100,8 @@ async function loadHeroes() {
     const res = await fetch(API_URL);
     const data = await res.json();
 
+    console.log("DATA:", data); // 👈 важно
+
     const list = document.getElementById("heroesPage");
     list.innerHTML = "";
 
@@ -119,23 +109,24 @@ async function loadHeroes() {
 
     let filtered = data.filter(hero => {
 
-        if (!hero.name) return false;
+        // подстраховка под любые названия
+        const name = (hero.name || hero.Name || "").toLowerCase();
 
-        // показываем всех, если поиск пустой
+        if (!name) return false;
+
         if (search === "") return true;
 
-        return hero.name.toLowerCase().startsWith(search);
+        return name.startsWith(search);
     });
-    console.log(data);
-    
-    filtered.sort((a, b) => a.name.localeCompare(b.name));
-    
+
+    filtered.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
     filtered.forEach(hero => {
         list.innerHTML += `
             <div class="glass p-3 rounded-xl text-center">
-                <img src="${hero.icon}" class="w-16 h-16 mx-auto mb-2 rounded">
-                <div class="font-bold">${hero.name}</div>
-                <div class="text-xs text-cyan-400">${hero.class_type}</div>
+                <img src="${hero.icon || ""}" class="w-16 h-16 mx-auto mb-2 rounded">
+                <div class="font-bold">${hero.name || hero.Name}</div>
+                <div class="text-xs text-cyan-400">${hero.class_type || ""}</div>
             </div>
         `;
     });
