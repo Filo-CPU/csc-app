@@ -126,6 +126,7 @@ async function loadHeroes() {
 
         return hero.name.toLowerCase().startsWith(search);
     });
+    console.log(data);
     
     filtered.sort((a, b) => a.name.localeCompare(b.name));
     
