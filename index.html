@@ -1,58 +1,150 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSC Encyclopedia</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background: #0f172a; color: white; font-family: sans-serif; }
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC App</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body { background:#0f172a; color:white; }
+.glass { background:rgba(255,255,255,0.05); backdrop-filter:blur(10px); }
+</style>
 </head>
+
 <body class="p-4">
-    <div id="app">
-        <h1 class="text-2xl font-bold mb-6 text-cyan-400 text-center">Custom Steve Chaos</h1>
-        
-        <div id="hero-list" class="grid grid-cols-2 gap-4">
-            <p class="col-span-2 text-center text-gray-400">Загрузка персонажей...</p>
-        </div>
-    </div>
 
-    <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyIhcHgJwn8VFtDiu5rSJBsNX18BM7zTEeXTr3-d8svz3WzNouV8lAAxnjZOXDIERut/exec";
+<h1 class="text-xl text-center text-cyan-400 mb-4">CSC App</h1>
 
-        async function loadHeroes() {
-            try {
-                const response = await fetch(API_URL);
-                const data = await response.json();
-                const list = document.getElementById('hero-list');
-                list.innerHTML = '';
+<!-- LOGIN -->
+<div id="login-block" class="text-center mb-4">
+<script async src="https://telegram.org/js/telegram-widget.js?22"
+data-telegram-login="YOUR_BOT_USERNAME"
+data-size="large"
+data-onauth="onTelegramAuth(user)"
+data-request-access="write">
+</script>
+</div>
 
-                data.forEach(hero => {
-                    if (hero.status === "published") {
-                        list.innerHTML += `
-                            <div class="glass p-3 rounded-xl text-center"
-                                 onclick="alert('Открываем: ${hero.name}')">
-                                <img src="${hero.icon}" class="w-16 h-16 mx-auto rounded-lg mb-2">
-                                <div class="font-bold text-sm">${hero.name}</div>
-                                <div class="text-[10px] text-cyan-300 uppercase">${hero.class_type}</div>
-                            </div>
-                        `;
-                    }
-                });
+<!-- NAV -->
+<div class="flex gap-2 mb-4">
+<button onclick="showPage('heroes')" class="bg-cyan-600 px-3 py-2 rounded">Герои</button>
+<button id="admin-btn" onclick="showPage('admin')" class="bg-red-600 px-3 py-2 rounded hidden">Админ</button>
+</div>
 
-                // если ничего нет
-                if (list.innerHTML === '') {
-                    list.innerHTML = `<p class="col-span-2 text-center text-gray-500">Нет опубликованных героев</p>`;
-                }
+<!-- HEROES -->
+<div id="hero-list" class="grid grid-cols-2 gap-4"></div>
 
-            } catch (e) {
-                console.error("Ошибка загрузки:", e);
-            }
+<!-- ADMIN -->
+<div id="admin-panel" class="hidden">
+<input id="h_name" placeholder="Имя" class="input-field">
+<input id="h_class" placeholder="Класс" class="input-field">
+<input id="h_hp" placeholder="HP" class="input-field">
+<input id="h_dmg" placeholder="Damage" class="input-field">
+<input id="h_icon" placeholder="Icon URL" class="input-field">
+<textarea id="h_desc" placeholder="Описание" class="input-field"></textarea>
+
+<div class="flex gap-2 mt-2">
+<button onclick="saveHero('draft')" class="bg-gray-600 px-3 py-2 rounded">Черновик</button>
+<button onclick="saveHero('published')" class="bg-green-600 px-3 py-2 rounded">Опубликовать</button>
+</div>
+</div>
+
+<style>
+.input-field {
+background:#1e293b;
+border:1px solid #334155;
+padding:8px;
+margin-bottom:8px;
+width:100%;
+border-radius:6px;
+}
+</style>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyIhcHgJwn8VFtDiu5rSJBsNX18BM7zTEeXTr3-d8svz3WzNouV8lAAxnjZOXDIERut/exec";
+const ADMIN_ID = "123456789";
+
+let USER = null;
+
+// TELEGRAM LOGIN
+function onTelegramAuth(user) {
+    USER = user;
+    localStorage.setItem("tg_user", JSON.stringify(user));
+    initApp();
+}
+
+// INIT
+function initApp() {
+    if (!USER) {
+        USER = JSON.parse(localStorage.getItem("tg_user"));
+    }
+
+    if (USER && USER.id == ADMIN_ID) {
+        document.getElementById("admin-btn").classList.remove("hidden");
+    }
+
+    loadHeroes();
+}
+
+// LOAD HEROES
+async function loadHeroes() {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+
+    const list = document.getElementById('hero-list');
+    list.innerHTML = '';
+
+    data.forEach(hero => {
+        if (hero.status === "published") {
+            list.innerHTML += `
+                <div class="glass p-3 rounded text-center">
+                    <img src="${hero.icon}" class="w-16 h-16 mx-auto mb-2">
+                    <div>${hero.name}</div>
+                    <div class="text-cyan-400 text-sm">${hero.class_type}</div>
+                </div>
+            `;
         }
+    });
+}
 
-        loadHeroes();
-    </script>
+// NAV
+function showPage(page) {
+    document.getElementById('hero-list').style.display = page === 'heroes' ? 'grid' : 'none';
+    document.getElementById('admin-panel').style.display = page === 'admin' ? 'block' : 'none';
+}
+
+// SAVE HERO
+async function saveHero(status) {
+    const payload = {
+        user_id: USER.id,
+        id: Date.now(),
+        name: document.getElementById('h_name').value,
+        class_type: document.getElementById('h_class').value,
+        hp: document.getElementById('h_hp').value,
+        damage: document.getElementById('h_dmg').value,
+        magic: 0,
+        icon: document.getElementById('h_icon').value,
+        ability_name: "",
+        video: "",
+        desc: document.getElementById('h_desc').value,
+        status: status
+    };
+
+    await fetch(API_URL, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+    });
+
+    alert("Сохранено!");
+    loadHeroes();
+}
+
+// AUTO LOGIN
+initApp();
+</script>
+
 </body>
 </html>
