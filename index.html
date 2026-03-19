@@ -117,11 +117,18 @@ async function loadHeroes() {
 
     const search = document.getElementById("search").value.toLowerCase();
 
-    let filtered = data.filter(hero =>
-        hero.status === "published" &&
-        hero.name.toLowerCase().startsWith(search)
-    );
+    let filtered = data.filter(hero => {
 
+        if (!hero.name) return false;
+
+        // показываем всех, если поиск пустой
+        if (search === "") return true;
+
+        return hero.name.toLowerCase().startsWith(search);
+    });
+    
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+    
     filtered.forEach(hero => {
         list.innerHTML += `
             <div class="glass p-3 rounded-xl text-center">
