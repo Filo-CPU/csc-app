@@ -22,7 +22,6 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
 }
 </style>
 </head>
-
 <body class="p-4 pb-24">
 
 <!-- HEADER -->
@@ -35,9 +34,7 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
 
 <!-- HERO LIST -->
 <div id="heroesPage" class="grid grid-cols-2 gap-3">
-    <p id="loading" class="col-span-2 text-center text-gray-400">
-        Загрузка героев...
-    </p>
+    <p id="loading" class="col-span-2 text-center text-gray-400">Загрузка героев...</p>
 </div>
 
 <!-- DISCUSS -->
@@ -45,9 +42,8 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
     В разработке 🚧
 </div>
 
-<!-- ADMIN -->
+<!-- ADMIN PANEL -->
 <div id="adminPage" class="hidden">
-
     <h2 class="text-lg font-bold mb-4">Админ панель</h2>
 
     <input id="h_name" class="input mb-2" placeholder="Имя">
@@ -64,64 +60,51 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
         <button onclick="saveHero('draft')" class="bg-yellow-500 px-3 py-2 rounded w-full">Сохранить</button>
         <button onclick="saveHero('published')" class="bg-green-600 px-3 py-2 rounded w-full">Опубликовать</button>
     </div>
-
     <button onclick="clearForm()" class="bg-red-600 mt-3 w-full py-2 rounded">Очистить</button>
 
-    <!-- СПИСКИ -->
     <h3 class="mt-6 font-bold">Опубликованные</h3>
     <div id="adminPublished" class="grid grid-cols-2 gap-2"></div>
 
     <h3 class="mt-6 font-bold">Черновики</h3>
     <div id="adminDrafts" class="grid grid-cols-2 gap-2"></div>
-
 </div>
 
 <script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyi4q61FTW1jBH5PsegIXuUCWYvuVR0KWYYqxGgmE4zHd2offXmauAn510LFoQv0uZB/exec";
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyIhcHgJwn8VFtDiu5rSJBsNX18BM7zTEeXTr3-d8svz3WzNouV8lAAxnjZOXDIERut/exec";
-
-let ALL_HEROES = JSON.parse(localStorage.getItem("heroes_cache") || "[]");
+let ALL_HEROES = [];
 let currentHeroId = null;
 
-// ПЕРЕКЛЮЧЕНИЕ
+// Переключение страниц
 function showPage(page) {
     document.getElementById("heroesPage").classList.add("hidden");
     document.getElementById("adminPage").classList.add("hidden");
     document.getElementById("discussPage").classList.add("hidden");
 
-    if (page === "heroes") document.getElementById("heroesPage").classList.remove("hidden");
-    if (page === "admin") document.getElementById("adminPage").classList.remove("hidden");
-    if (page === "discuss") document.getElementById("discussPage").classList.remove("hidden");
+    if(page==="heroes") document.getElementById("heroesPage").classList.remove("hidden");
+    if(page==="admin") document.getElementById("adminPage").classList.remove("hidden");
+    if(page==="discuss") document.getElementById("discussPage").classList.remove("hidden");
 }
 
-// ПОИСК
+// Поиск героев
 document.getElementById("search").addEventListener("input", renderHeroes);
 
-// РЕНДЕР ГЕРОЕВ
+// Рендер списка героев (только опубликованные)
 function renderHeroes() {
-
     const list = document.getElementById("heroesPage");
     list.innerHTML = "";
-
     const search = document.getElementById("search").value.toLowerCase();
 
-    let filtered = ALL_HEROES.filter(hero => {
+    let filtered = ALL_HEROES.filter(hero => hero.status === "published" && hero.name && hero.name.toLowerCase().startsWith(search));
 
-        const name = (hero.name || "").toLowerCase();
+    filtered.sort((a,b)=>a.name.localeCompare(b.name));
 
-        // ❗ показываем ТОЛЬКО опубликованные
-        if (hero.status !== "published") return false;
+    if(filtered.length === 0){
+        list.innerHTML = `<p class="text-center col-span-2 text-gray-400">Ничего не найдено</p>`;
+        return;
+    }
 
-        if (!name) return false;
-
-        if (search === "") return true;
-
-        return name.startsWith(search);
-    });
-
-    filtered.sort((a, b) => a.name.localeCompare(b.name));
-
-    filtered.forEach(hero => {
+    filtered.forEach(hero=>{
         list.innerHTML += `
             <div class="glass p-3 rounded-xl text-center">
                 <img src="${hero.icon}" class="w-16 h-16 mx-auto mb-2 rounded">
@@ -130,40 +113,25 @@ function renderHeroes() {
             </div>
         `;
     });
-
-    if (filtered.length === 0) {
-        list.innerHTML = `<p class="text-center col-span-2 text-gray-400">Ничего не найдено</p>`;
-    }
 }
-// АДМИН СПИСКИ
-function renderAdminLists() {
 
+// Рендер админ-панели
+function renderAdminLists() {
     const pub = document.getElementById("adminPublished");
     const draft = document.getElementById("adminDrafts");
+    pub.innerHTML = ""; draft.innerHTML = "";
 
-    pub.innerHTML = "";
-    draft.innerHTML = "";
-
-    ALL_HEROES.forEach(hero => {
-
-        const card = `
-            <div onclick="editHero(${hero.id})"
-                 class="glass p-2 text-center text-sm cursor-pointer">
-                ${hero.name || "Без имени"}
-            </div>
-        `;
-
-        if (hero.status === "published") pub.innerHTML += card;
+    ALL_HEROES.forEach(hero=>{
+        const card = `<div onclick="editHero(${hero.id})" class="glass p-2 text-center text-sm cursor-pointer">${hero.name||"Без имени"}</div>`;
+        if(hero.status==="published") pub.innerHTML += card;
         else draft.innerHTML += card;
     });
 }
 
-// РЕДАКТИРОВАНИЕ
-function editHero(id) {
-
-    const hero = ALL_HEROES.find(h => h.id == id);
-    if (!hero) return;
-
+// Редактирование
+function editHero(id){
+    const hero = ALL_HEROES.find(h=>h.id==id);
+    if(!hero) return;
     currentHeroId = hero.id;
 
     document.getElementById("h_name").value = hero.name || "";
@@ -177,24 +145,18 @@ function editHero(id) {
     document.getElementById("h_desc").value = hero.desc || "";
 }
 
-// ЗАГРУЗКА
-async function loadHeroes() {
-
+// Загрузка героев
+async function loadHeroes(){
     try {
         const res = await fetch(API_URL);
         ALL_HEROES = await res.json();
-
-        localStorage.setItem("heroes_cache", JSON.stringify(ALL_HEROES));
-
-    } catch {}
-
+    } catch(e){}
     renderHeroes();
     renderAdminLists();
 }
 
-// СОХРАНЕНИЕ
-async function saveHero(status) {
-
+// Сохранение
+async function saveHero(status){
     const payload = {
         id: currentHeroId,
         name: document.getElementById("h_name").value,
@@ -206,45 +168,36 @@ async function saveHero(status) {
         ability_name: document.getElementById("h_ability").value,
         video: document.getElementById("h_video").value,
         desc: document.getElementById("h_desc").value,
-        status: status
+        status
     };
 
-    try {
-        const res = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+    try{
+        const res = await fetch(API_URL,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(payload)
         });
         const data = await res.json();
-        
-        // 🔥 ВОТ КЛЮЧ
-        if (data.id) {
-            currentHeroId = data.id;
-        }
-
-        alert("Сохранено: " + data.status);
-
+        if(data.id) currentHeroId = data.id;
+        alert("Сохранено: "+data.status);
         await loadHeroes();
-
-    } catch (err) {
-        alert("Ошибка: " + err);
+    } catch(err){
+        alert("Ошибка: "+err);
     }
 }
 
-// ОЧИСТКА
-function clearForm() {
-    document.querySelectorAll("#adminPage input, #adminPage textarea")
-        .forEach(el => el.value = "");
-    currentHeroId = null;
+// Очистка формы
+function clearForm(){
+    document.querySelectorAll("#adminPage input,#adminPage textarea").forEach(el=>el.value="");
+    currentHeroId=null;
 }
 
-// СТАРТ
-renderHeroes();
+// Старт
+showPage("heroes");
 loadHeroes();
-
 </script>
 
-<!-- НИЖНЕЕ МЕНЮ -->
+<!-- Нижнее меню -->
 <div class="fixed bottom-0 left-0 right-0 bg-[#020617] border-t border-slate-800 flex justify-around p-2">
     <button onclick="showPage('heroes')" class="text-cyan-400">Герои</button>
     <button onclick="showPage('discuss')" class="text-gray-400">Обсуждение</button>
