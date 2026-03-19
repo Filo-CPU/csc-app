@@ -47,6 +47,7 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
 
 <!-- ADMIN -->
 <div id="adminPage" class="hidden">
+
     <h2 class="text-lg font-bold mb-4">Админ панель</h2>
 
     <input id="h_name" class="input mb-2" placeholder="Имя">
@@ -68,12 +69,13 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
 </div>
 
 <script>
+
 const API_URL = "https://script.google.com/macros/s/AKfycbyIhcHgJwn8VFtDiu5rSJBsNX18BM7zTEeXTr3-d8svz3WzNouV8lAAxnjZOXDIERut/exec";
 
-// ✅ КЭШ
 let ALL_HEROES = JSON.parse(localStorage.getItem("heroes_cache") || "[]");
+let currentHeroId = null;
 
-// переключение страниц
+// ПЕРЕКЛЮЧЕНИЕ СТРАНИЦ
 function showPage(page) {
     document.getElementById("heroesPage").classList.add("hidden");
     document.getElementById("adminPage").classList.add("hidden");
@@ -84,36 +86,12 @@ function showPage(page) {
     if (page === "discuss") document.getElementById("discussPage").classList.remove("hidden");
 }
 
-// поиск
+// ПОИСК
 document.getElementById("search").addEventListener("input", renderHeroes);
 
-// загрузка данных
-async function loadHeroes() {
-    const loading = document.getElementById("loading");
-
-    // если есть кэш → сразу показываем
-    if (ALL_HEROES.length > 0) {
-        renderHeroes();
-    }
-
-    try {
-        const res = await fetch(API_URL);
-        const data = await res.json();
-
-        ALL_HEROES = data;
-        localStorage.setItem("heroes_cache", JSON.stringify(data));
-
-        renderHeroes();
-
-    } catch (e) {
-        console.error("Ошибка загрузки:", e);
-    }
-
-    if (loading) loading.style.display = "none";
-}
-
-// рендер
+// РЕНДЕР
 function renderHeroes() {
+
     const list = document.getElementById("heroesPage");
     list.innerHTML = "";
 
@@ -143,10 +121,41 @@ function renderHeroes() {
     }
 }
 
-// сохранение
+// ЗАГРУЗКА
+async function loadHeroes() {
+
+    const loading = document.getElementById("loading");
+    if (loading) loading.style.display = "block";
+
+    try {
+        const res = await fetch(API_URL);
+        ALL_HEROES = await res.json();
+
+        localStorage.setItem("heroes_cache", JSON.stringify(ALL_HEROES));
+
+    } catch (e) {
+        console.log("Ошибка загрузки, используем кэш");
+    }
+
+    if (loading) loading.style.display = "none";
+
+    renderHeroes();
+}
+
+// ФОНОВАЯ ОБНОВА
+fetch(API_URL)
+.then(res => res.json())
+.then(data => {
+    ALL_HEROES = data;
+    localStorage.setItem("heroes_cache", JSON.stringify(data));
+    renderHeroes();
+});
+
+// СОХРАНЕНИЕ
 async function saveHero(status) {
+
     const payload = {
-        id: Date.now(),
+        id: currentHeroId || Date.now(),
         name: document.getElementById("h_name").value,
         class_type: document.getElementById("h_class").value,
         hp: document.getElementById("h_hp").value,
@@ -166,6 +175,8 @@ async function saveHero(status) {
             body: JSON.stringify(payload)
         });
 
+        currentHeroId = payload.id;
+
         alert("Сохранено!");
 
         clearForm();
@@ -177,20 +188,27 @@ async function saveHero(status) {
     }
 }
 
-// очистка
+// ОЧИСТКА
 function clearForm() {
     document.querySelectorAll("input, textarea").forEach(el => el.value = "");
+    currentHeroId = null;
 }
 
-// старт
+// СТАРТ
+renderHeroes();
 loadHeroes();
+
 </script>
 
-<!-- НАВИГАЦИЯ -->
+<!-- НИЖНЕЕ МЕНЮ -->
 <div class="fixed bottom-0 left-0 right-0 bg-[#020617] border-t border-slate-800 flex justify-around p-2">
+
     <button onclick="showPage('heroes')" class="text-cyan-400">Герои</button>
+
     <button onclick="showPage('discuss')" class="text-gray-400">Обсуждение</button>
+
     <button onclick="showPage('admin')" class="text-red-400">Админ</button>
+
 </div>
 
 </body>
