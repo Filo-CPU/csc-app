@@ -212,13 +212,10 @@ async function saveHero(status) {
     try {
         const res = await fetch(API_URL, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
-
-        const data = await res.json(); // теперь JSON точно получаем
+        const data = await res.json();
         
         // 🔥 ВОТ КЛЮЧ
         if (data.id) {
