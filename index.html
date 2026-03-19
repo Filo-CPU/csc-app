@@ -37,6 +37,10 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
 <!-- HERO LIST -->
 <div id="heroesPage" class="grid grid-cols-2 gap-3"></div>
 
+<div id="discussPage" class="hidden text-center mt-10 text-gray-400">
+    В разработке 🚧
+</div>
+    
 <!-- ADMIN PAGE -->
 <div id="adminPage" class="hidden">
 
@@ -46,6 +50,8 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
     <input id="h_class" class="input mb-2" placeholder="Класс">
     <input id="h_hp" class="input mb-2" placeholder="HP">
     <input id="h_dmg" class="input mb-2" placeholder="Damage">
+    <input id="h_magic" class="input mb-2" placeholder="Magic %">
+    <input id="h_ability" class="input mb-2" placeholder="Название способности">
     <input id="h_icon" class="input mb-2" placeholder="Icon URL">
     <input id="h_video" class="input mb-2" placeholder="Video URL">
     <textarea id="h_desc" class="input mb-2" placeholder="Описание"></textarea>
@@ -59,13 +65,26 @@ body { background:#0f172a; color:white; font-family:sans-serif; }
 </div>
 
 <script>
+function showPage(page) {
+
+    document.getElementById("heroesPage").classList.add("hidden");
+    document.getElementById("adminPage").classList.add("hidden");
+    document.getElementById("discussPage").classList.add("hidden");
+
+    if (page === "heroes") {
+        document.getElementById("heroesPage").classList.remove("hidden");
+    }
+
+    if (page === "admin") {
+        document.getElementById("adminPage").classList.remove("hidden");
+    }
+
+    if (page === "discuss") {
+        document.getElementById("discussPage").classList.remove("hidden");
+    }
+}
+    
 const API_URL = "https://script.google.com/macros/s/AKfycbyIhcHgJwn8VFtDiu5rSJBsNX18BM7zTEeXTr3-d8svz3WzNouV8lAAxnjZOXDIERut/exec";
-
-// 🔐 ТВОЙ ID
-const ADMIN_ID = "2114339294";
-
-// сохраняем ID
-let USER_ID = localStorage.getItem("user_id");
 
 if (!USER_ID) {
     USER_ID = prompt("2114339294");
@@ -98,48 +117,58 @@ async function loadHeroes() {
 
     const search = document.getElementById("search").value.toLowerCase();
 
-    data.forEach(hero => {
+    let filtered = data.filter(hero =>
+        hero.status === "published" &&
+        hero.name.toLowerCase().startsWith(search)
+    );
 
-        if (hero.status !== "published") return;
-
-        if (hero.name.toLowerCase().includes(search)) {
-            list.innerHTML += `
-                <div class="glass p-3 rounded-xl text-center">
-                    <img src="${hero.icon}" class="w-16 h-16 mx-auto mb-2 rounded">
-                    <div class="font-bold">${hero.name}</div>
-                    <div class="text-xs text-cyan-400">${hero.class_type}</div>
-                </div>
-            `;
-        }
+    filtered.forEach(hero => {
+        list.innerHTML += `
+            <div class="glass p-3 rounded-xl text-center">
+                <img src="${hero.icon}" class="w-16 h-16 mx-auto mb-2 rounded">
+                <div class="font-bold">${hero.name}</div>
+                <div class="text-xs text-cyan-400">${hero.class_type}</div>
+            </div>
+        `;
     });
+
+    if (filtered.length === 0) {
+        list.innerHTML = `<p class="text-center col-span-2 text-gray-400">Ничего не найдено</p>`;
+    }
 }
 
 // сохранение героя
 async function saveHero(status) {
 
     const payload = {
-        user_id: USER_ID,
         id: Date.now(),
         name: document.getElementById("h_name").value,
         class_type: document.getElementById("h_class").value,
         hp: document.getElementById("h_hp").value,
         damage: document.getElementById("h_dmg").value,
-        magic: 0,
+        magic: document.getElementById("h_magic").value,
         icon: document.getElementById("h_icon").value,
-        ability_name: "",
+        ability_name: document.getElementById("h_ability").value,
         video: document.getElementById("h_video").value,
         desc: document.getElementById("h_desc").value,
         status: status
     };
 
-    await fetch(API_URL, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(payload)
-    });
+    try {
+        const res = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
 
-    alert("Сохранено");
-    location.reload();
+        const text = await res.text();
+        alert("Ответ сервера: " + text);
+
+    } catch (err) {
+        alert("Ошибка отправки: " + err);
+    }
 }
 
 // очистка
@@ -151,5 +180,15 @@ function clearForm() {
 loadHeroes();
 </script>
 
+<div class="fixed bottom-0 left-0 right-0 bg-[#020617] border-t border-slate-800 flex justify-around p-2">
+
+    <button onclick="showPage('heroes')" class="text-cyan-400">Герои</button>
+
+    <button onclick="showPage('discuss')" class="text-gray-400">Обсуждение</button>
+
+    <button onclick="showPage('admin')" class="text-red-400">Админ</button>
+
+</div>
+    
 </body>
 </html>
