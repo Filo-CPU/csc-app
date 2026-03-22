@@ -189,60 +189,15 @@ function editHero(id) {
 
 // 6. СОХРАНЕНИЕ (БЕЗ ДУБЛЕЙ)
 async function saveHero(status) {
-    const nameInput = document.getElementById("h_name");
-    const payload = {
-        id: currentHeroId, // Скрипт в таблице теперь сам проверит ID или Имя
-        name: nameInput.value.trim(),
-        class_type: document.getElementById("h_class").value,
-        hp: document.getElementById("h_hp").value,
-        damage: document.getElementById("h_dmg").value,
-        magic: document.getElementById("h_magic").value,
-        icon: document.getElementById("h_icon").value,
-        ability_name: document.getElementById("h_ability").value,
-        video: document.getElementById("h_video").value,
-        desc: document.getElementById("h_desc").value,
-        status: status
-    };
+    const name = document.getElementById("h_name").value.trim();
+    if (!name) return alert("Введите имя героя!");
 
-    if (!payload.name) return alert("Введите имя героя!");
-
-    const btn = status === 'published' ? document.getElementById("btnPub") : document.getElementById("btnDraft");
-    const originalText = btn.innerText;
-    btn.innerText = "⌛ Сохранение...";
-    btn.disabled = true;
-
-    try {
-        await fetch(API_URL, {
-            method: "POST",
-            mode: "no-cors", 
-            body: JSON.stringify(payload)
-        });
-
-        // Ждем 1.5 секунды, чтобы таблица успела записать, и обновляем всё
-        setTimeout(async () => {
-            await loadHeroes();
-            btn.innerText = originalText;
-            btn.disabled = false;
-            alert("Готово!");
-            if(status === 'published') showPage('heroes');
-        }, 1500);
-
-    } catch (err) {
-        alert("Ошибка: " + err);
-        btn.disabled = false;
-        btn.innerText = originalText;
-    }
-}
-
-async function deleteHero() {
-    if (!currentHeroId) return;
+    // Берем именно ту кнопку, на которую нажали (Опубликовать или Черновик)
+    const activeBtn = status === 'published' ? document.getElementById("btnPub") : document.getElementById("btnDraft");
+    const originalText = activeBtn.innerText;
     
-    const heroName = document.getElementById("h_name").value;
-    if (!confirm(`Вы точно хотите удалить героя "${heroName}"? Это действие нельзя отменить!`)) return;
-
-    const btn = document.getElementById("btnDelete");
-    btn.innerText = "Удаление...";
-    btn.disabled = true;
+    activeBtn.innerText = "⏳ Сохранение...";
+    activeBtn.disabled = true;
 
     try {
         await fetch(API_URL, {
@@ -250,20 +205,67 @@ async function deleteHero() {
             mode: "no-cors",
             body: JSON.stringify({
                 id: currentHeroId,
-                action: "delete" // Посылаем сигнал таблице, что это именно удаление
+                name: name,
+                class_type: document.getElementById("h_class").value,
+                hp: document.getElementById("h_hp").value,
+                damage: document.getElementById("h_dmg").value,
+                magic: document.getElementById("h_magic").value,
+                icon: document.getElementById("h_icon").value,
+                ability_name: document.getElementById("h_ability").value,
+                video: document.getElementById("h_video").value,
+                desc: document.getElementById("h_desc").value,
+                status: status
             })
         });
 
         setTimeout(async () => {
-            await loadHeroes(); // Обновляем данные, чтобы удаленный герой исчез
-            clearForm(); // Очищаем форму
-            alert("Герой успешно удален!");
+            await loadHeroes();
+            activeBtn.innerText = originalText;
+            activeBtn.disabled = false;
+            alert("Данные в таблице обновлены!");
+            if(status === 'published') showPage('heroes');
+        }, 1500);
+
+    } catch (e) {
+        alert("Ошибка при сохранении");
+        activeBtn.innerText = originalText;
+        activeBtn.disabled = false;
+    }
+}
+async function deleteHero() {
+    if (!currentHeroId) return alert("Сначала выберите героя для удаления!");
+    
+    const heroName = document.getElementById("h_name").value;
+    if (!confirm(`Вы точно хотите удалить "${heroName}"? Это удалит строку из таблицы и пересчитает все ID!`)) return;
+
+    const delBtn = document.getElementById("btnDelete");
+    const originalDelText = "Удалить карточку";
+    
+    delBtn.innerText = "🗑️ Удаление...";
+    delBtn.disabled = true;
+
+    try {
+        await fetch(API_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({
+                id: currentHeroId,
+                action: "delete" // Отправляем четкую команду на удаление
+            })
+        });
+
+        setTimeout(async () => {
+            await loadHeroes();
+            delBtn.innerText = originalDelText;
+            delBtn.disabled = false;
+            clearForm(); // Очищаем форму и прячем кнопку удаления
+            alert("Герой удален, ID в таблице обновлены!");
         }, 1500);
 
     } catch (e) {
         alert("Ошибка при удалении");
-        btn.disabled = false;
-        btn.innerText = "Удалить карточку";
+        delBtn.innerText = originalDelText;
+        delBtn.disabled = false;
     }
 }
     
