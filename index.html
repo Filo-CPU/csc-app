@@ -30,7 +30,10 @@
 
 <div class="flex justify-between items-center mb-4">
     <h1 class="text-xl font-bold text-cyan-400">CSC Heroes</h1>
-    <div id="syncStatus" class="text-[10px] text-gray-500">Обновлено</div>
+    <div class="flex items-center gap-3">
+        <div id="syncStatus" class="text-[10px] text-gray-500">Обновлено</div>
+        <button onclick="loadHeroes()" class="bg-slate-800 p-2 rounded-lg text-xs active:scale-95 transition">🔄</button>
+    </div>
 </div>
 
 <input id="search" placeholder="Поиск героя..." class="input">
@@ -95,24 +98,21 @@ async function loadHeroes() {
     statusEl.classList.add("loading-pulse");
 
     try {
-        const res = await fetch(API_URL);
+        // Добавляем ?t= к ссылке, чтобы данные на ПК и Телефоне были всегда свежими
+        const res = await fetch(API_URL + "?t=" + Date.now());
         const data = await res.json();
         
-        // Сортировка по имени
         ALL_HEROES = data.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-        
-        // Сохраняем в кэш
         localStorage.setItem('csc_cache', JSON.stringify(ALL_HEROES));
         
         renderHeroes();
         renderAdminLists();
         
-        statusEl.innerText = "Данные актуальны";
+        statusEl.innerText = "Актуально: " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         statusEl.classList.remove("loading-pulse");
-        document.getElementById("loadingMsg").classList.add("hidden");
+        document.getElementById("loadingMsg")?.classList.add("hidden");
     } catch (e) {
-        console.error("Ошибка сети:", e);
-        statusEl.innerText = "Оффлайн режим";
+        statusEl.innerText = "Ошибка сети";
     }
 }
 
@@ -183,9 +183,10 @@ function editHero(id) {
 
 // 6. СОХРАНЕНИЕ (БЕЗ ДУБЛЕЙ)
 async function saveHero(status) {
+    const nameInput = document.getElementById("h_name");
     const payload = {
-        id: currentHeroId, // Если null — создаст новую строку, если есть ID — обновит старую
-        name: document.getElementById("h_name").value,
+        id: currentHeroId, // Скрипт в таблице теперь сам проверит ID или Имя
+        name: nameInput.value.trim(),
         class_type: document.getElementById("h_class").value,
         hp: document.getElementById("h_hp").value,
         damage: document.getElementById("h_dmg").value,
@@ -201,24 +202,24 @@ async function saveHero(status) {
 
     const btn = status === 'published' ? document.getElementById("btnPub") : document.getElementById("btnDraft");
     const originalText = btn.innerText;
-    btn.innerText = "⌛ Ждите...";
+    btn.innerText = "⌛ Сохранение...";
     btn.disabled = true;
 
     try {
-        // Используем POST без сложных заголовков, чтобы избежать CORS
         await fetch(API_URL, {
             method: "POST",
             mode: "no-cors", 
             body: JSON.stringify(payload)
         });
 
-        // После отправки ждем немного и обновляем данные
+        // Ждем 1.5 секунды, чтобы таблица успела записать, и обновляем всё
         setTimeout(async () => {
             await loadHeroes();
             btn.innerText = originalText;
             btn.disabled = false;
-            alert("Успешно: " + (status === 'published' ? 'Опубликовано' : 'В черновиках'));
-        }, 1200);
+            alert("Готово!");
+            if(status === 'published') showPage('heroes');
+        }, 1500);
 
     } catch (err) {
         alert("Ошибка: " + err);
@@ -226,7 +227,7 @@ async function saveHero(status) {
         btn.innerText = originalText;
     }
 }
-
+    
 // Очистка
 function clearForm() {
     document.querySelectorAll("#adminPage input, #adminPage textarea").forEach(el => el.value = "");
@@ -250,6 +251,7 @@ document.getElementById("search").addEventListener("input", renderHeroes);
 loadFromCache(); // Сначала кэш
 loadHeroes();    // Потом запрос к Google
 showPage("heroes");
+setInterval(loadHeroes, 60000);   // Авто-проверка обновлений каждые 60 секунд (для синхронизации устройств)
 
 </script>
 
