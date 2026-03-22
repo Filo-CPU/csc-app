@@ -189,15 +189,15 @@ function editHero(id) {
 
 // 6. СОХРАНЕНИЕ (БЕЗ ДУБЛЕЙ)
 async function saveHero(status) {
-    const name = document.getElementById("h_name").value.trim();
-    if (!name) return alert("Введите имя героя!");
+    const nameInput = document.getElementById("h_name");
+    const name = nameInput.value.trim();
+    if (!name) return alert("Имя героя не может быть пустым!");
 
-    // Берем именно ту кнопку, на которую нажали (Опубликовать или Черновик)
-    const activeBtn = status === 'published' ? document.getElementById("btnPub") : document.getElementById("btnDraft");
-    const originalText = activeBtn.innerText;
+    const btn = status === 'published' ? document.getElementById("btnPub") : document.getElementById("btnDraft");
+    const originalText = btn.innerText;
     
-    activeBtn.innerText = "⏳ Сохранение...";
-    activeBtn.disabled = true;
+    btn.innerText = "⌛ Ждите...";
+    btn.disabled = true;
 
     try {
         await fetch(API_URL, {
@@ -218,28 +218,28 @@ async function saveHero(status) {
             })
         });
 
+        // ПРИНУДИТЕЛЬНЫЙ СБРОС СОСТОЯНИЯ ЧЕРЕЗ 1.5 сек
         setTimeout(async () => {
             await loadHeroes();
-            activeBtn.innerText = originalText;
-            activeBtn.disabled = false;
-            alert("Данные в таблице обновлены!");
+            btn.innerText = originalText;
+            btn.disabled = false;
+            alert("Сохранено!");
             if(status === 'published') showPage('heroes');
         }, 1500);
 
     } catch (e) {
-        alert("Ошибка при сохранении");
-        activeBtn.innerText = originalText;
-        activeBtn.disabled = false;
+        btn.innerText = originalText;
+        btn.disabled = false;
+        alert("Ошибка сети");
     }
 }
 async function deleteHero() {
-    if (!currentHeroId) return alert("Сначала выберите героя для удаления!");
-    
-    const heroName = document.getElementById("h_name").value;
-    if (!confirm(`Вы точно хотите удалить "${heroName}"? Это удалит строку из таблицы и пересчитает все ID!`)) return;
+    if (!currentHeroId) return;
+    const name = document.getElementById("h_name").value;
+    if (!confirm(`Удалить "${name}" навсегда?`)) return;
 
     const delBtn = document.getElementById("btnDelete");
-    const originalDelText = "Удалить карточку";
+    const originalText = "Удалить карточку";
     
     delBtn.innerText = "🗑️ Удаление...";
     delBtn.disabled = true;
@@ -250,22 +250,24 @@ async function deleteHero() {
             mode: "no-cors",
             body: JSON.stringify({
                 id: currentHeroId,
-                action: "delete" // Отправляем четкую команду на удаление
+                name: name, // Передаем имя для доп. проверки в таблице
+                action: "delete"
             })
         });
 
+        // ПРИНУДИТЕЛЬНЫЙ СБРОС СОСТОЯНИЯ
         setTimeout(async () => {
             await loadHeroes();
-            delBtn.innerText = originalDelText;
+            delBtn.innerText = originalText;
             delBtn.disabled = false;
-            clearForm(); // Очищаем форму и прячем кнопку удаления
-            alert("Герой удален, ID в таблице обновлены!");
+            clearForm();
+            alert("Удалено и пересчитано!");
         }, 1500);
 
     } catch (e) {
-        alert("Ошибка при удалении");
-        delBtn.innerText = originalDelText;
+        delBtn.innerText = originalText;
         delBtn.disabled = false;
+        alert("Ошибка при удалении");
     }
 }
     
