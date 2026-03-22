@@ -196,7 +196,7 @@ async function saveHero(status) {
     const btn = status === 'published' ? document.getElementById("btnPub") : document.getElementById("btnDraft");
     const originalText = btn.innerText;
     
-    btn.innerText = "⌛ Ждите...";
+    btn.innerText = "⌛ Сохранение...";
     btn.disabled = true;
 
     try {
@@ -204,7 +204,8 @@ async function saveHero(status) {
             method: "POST",
             mode: "no-cors",
             body: JSON.stringify({
-                id: currentHeroId,
+                action: "save", // Добавили действие
+                id: currentHeroId, // Если null - создаст нового, если есть - обновит
                 name: name,
                 class_type: document.getElementById("h_class").value,
                 hp: document.getElementById("h_hp").value,
@@ -218,12 +219,12 @@ async function saveHero(status) {
             })
         });
 
-        // ПРИНУДИТЕЛЬНЫЙ СБРОС СОСТОЯНИЯ ЧЕРЕЗ 1.5 сек
         setTimeout(async () => {
             await loadHeroes();
             btn.innerText = originalText;
             btn.disabled = false;
-            alert("Сохранено!");
+            alert("Успешно сохранено!");
+            clearForm(); // Очищаем после сохранения
             if(status === 'published') showPage('heroes');
         }, 1500);
 
@@ -233,14 +234,13 @@ async function saveHero(status) {
         alert("Ошибка сети");
     }
 }
+    
 async function deleteHero() {
     if (!currentHeroId) return;
     const name = document.getElementById("h_name").value;
     if (!confirm(`Удалить "${name}" навсегда?`)) return;
 
     const delBtn = document.getElementById("btnDelete");
-    const originalText = "Удалить карточку";
-    
     delBtn.innerText = "🗑️ Удаление...";
     delBtn.disabled = true;
 
@@ -249,12 +249,25 @@ async function deleteHero() {
             method: "POST",
             mode: "no-cors",
             body: JSON.stringify({
-                id: currentHeroId,
-                name: name, // Передаем имя для доп. проверки в таблице
-                action: "delete"
+                action: "delete",
+                id: currentHeroId
             })
         });
 
+        setTimeout(async () => {
+            await loadHeroes();
+            delBtn.innerText = "Удалить карточку";
+            delBtn.disabled = false;
+            clearForm();
+            alert("Удалено!");
+        }, 1500);
+
+    } catch (e) {
+        delBtn.innerText = "Удалить карточку";
+        delBtn.disabled = false;
+        alert("Ошибка удаления");
+    }
+}+
         // ПРИНУДИТЕЛЬНЫЙ СБРОС СОСТОЯНИЯ
         setTimeout(async () => {
             await loadHeroes();
