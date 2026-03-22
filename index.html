@@ -1,138 +1,171 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CSC Wiki</title>
-<script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSC Wiki</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 
-<style>
-body { background:#0f172a; color:white; font-family:sans-serif; }
-.glass {
-    background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(10px);
-    border:1px solid rgba(255,255,255,0.1);
-}
-.input {
-    background:#020617;
-    border:1px solid #1e293b;
-    padding:10px;
-    border-radius:8px;
-    width:100%;
-}
-</style>
+    <style>
+        body { background:#0f172a; color:white; font-family:sans-serif; }
+        .glass {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border:1px solid rgba(255,255,255,0.1);
+        }
+        .input {
+            background:#020617;
+            border:1px solid #1e293b;
+            padding:10px;
+            border-radius:8px;
+            width:100%;
+            margin-bottom: 8px;
+        }
+        /* Анимация загрузки */
+        .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
 </head>
 <body class="p-4 pb-24">
 
-<!-- HEADER -->
 <div class="flex justify-between items-center mb-4">
     <h1 class="text-xl font-bold text-cyan-400">CSC Heroes</h1>
+    <div id="syncStatus" class="text-[10px] text-gray-500">Обновлено</div>
 </div>
 
-<!-- SEARCH -->
-<input id="search" placeholder="Поиск героя..." class="input mb-4">
+<input id="search" placeholder="Поиск героя..." class="input">
 
-<!-- HERO LIST -->
 <div id="heroesPage" class="grid grid-cols-2 gap-3">
-    <p id="loading" class="col-span-2 text-center text-gray-400">Загрузка героев...</p>
+    <p id="loadingMsg" class="col-span-2 text-center text-gray-400 mt-10">Загрузка...</p>
 </div>
 
-<!-- DISCUSS -->
 <div id="discussPage" class="hidden text-center mt-10 text-gray-400">
     В разработке 🚧
 </div>
 
-<!-- ADMIN PANEL -->
 <div id="adminPage" class="hidden">
-    <h2 class="text-lg font-bold mb-4">Админ панель</h2>
+    <h2 class="text-lg font-bold mb-4">Редактор Героя</h2>
 
-    <input id="h_name" class="input mb-2" placeholder="Имя">
-    <input id="h_class" class="input mb-2" placeholder="Класс">
-    <input id="h_hp" class="input mb-2" placeholder="HP">
-    <input id="h_dmg" class="input mb-2" placeholder="Damage">
-    <input id="h_magic" class="input mb-2" placeholder="Magic %">
-    <input id="h_ability" class="input mb-2" placeholder="Название способности">
-    <input id="h_icon" class="input mb-2" placeholder="Icon URL">
-    <input id="h_video" class="input mb-2" placeholder="Video URL">
-    <textarea id="h_desc" class="input mb-2" placeholder="Описание"></textarea>
-
-    <div class="flex gap-2 mt-3">
-        <button onclick="saveHero('draft')" class="bg-yellow-500 px-3 py-2 rounded w-full">Сохранить</button>
-        <button onclick="saveHero('published')" class="bg-green-600 px-3 py-2 rounded w-full">Опубликовать</button>
+    <input id="h_name" class="input" placeholder="Имя">
+    <input id="h_class" class="input" placeholder="Класс">
+    <div class="grid grid-cols-3 gap-2 mb-2">
+        <input id="h_hp" type="number" class="input" placeholder="HP">
+        <input id="h_dmg" type="number" class="input" placeholder="Damage">
+        <input id="h_magic" type="number" class="input" placeholder="Magic %">
     </div>
-    <button onclick="clearForm()" class="bg-red-600 mt-3 w-full py-2 rounded">Очистить</button>
+    <input id="h_ability" class="input" placeholder="Название способности">
+    <input id="h_icon" class="input" placeholder="Icon URL">
+    <input id="h_video" class="input" placeholder="Video URL (YouTube/ID)">
+    <textarea id="h_desc" class="input" placeholder="Описание (история, советы...)"></textarea>
 
-    <h3 class="mt-6 font-bold">Опубликованные</h3>
+    <div class="flex gap-2 mt-2">
+        <button id="btnDraft" onclick="saveHero('draft')" class="bg-yellow-600 px-3 py-3 rounded-lg w-full font-bold">В черновик</button>
+        <button id="btnPub" onclick="saveHero('published')" class="bg-cyan-600 px-3 py-3 rounded-lg w-full font-bold">Опубликовать</button>
+    </div>
+    <button onclick="clearForm()" class="text-gray-400 mt-4 w-full text-sm">Очистить форму</button>
+
+    <h3 class="mt-8 mb-2 font-bold text-cyan-400 border-b border-cyan-900/50 pb-1">Опубликованные</h3>
     <div id="adminPublished" class="grid grid-cols-2 gap-2"></div>
 
-    <h3 class="mt-6 font-bold">Черновики</h3>
+    <h3 class="mt-6 mb-2 font-bold text-yellow-400 border-b border-yellow-900/50 pb-1">Черновики</h3>
     <div id="adminDrafts" class="grid grid-cols-2 gap-2"></div>
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyi4q61FTW1jBH5PsegIXuUCWYvuVR0KWYYqxGgmE4zHd2offXmauAn510LFoQv0uZB/exec";
+// Твоя рабочая ссылка
+const API_URL = "https://script.google.com/macros/s/AKfycbxdH4UbZdGM0Ix_keYLnh_AnplSm3EptgNtt8y-2VmK_RINTbndvzaDifNi-WnbMWSq/exec";
 
 let ALL_HEROES = [];
 let currentHeroId = null;
 
-// Переключение страниц
-function showPage(page) {
-    document.getElementById("heroesPage").classList.add("hidden");
-    document.getElementById("adminPage").classList.add("hidden");
-    document.getElementById("discussPage").classList.add("hidden");
-
-    if(page==="heroes") document.getElementById("heroesPage").classList.remove("hidden");
-    if(page==="admin") document.getElementById("adminPage").classList.remove("hidden");
-    if(page==="discuss") document.getElementById("discussPage").classList.remove("hidden");
+// 1. УМНЫЙ КЭШ: Загрузка сразу при открытии
+function loadFromCache() {
+    const cached = localStorage.getItem('csc_cache');
+    if (cached) {
+        ALL_HEROES = JSON.parse(cached);
+        renderHeroes();
+        renderAdminLists();
+    }
 }
 
-// Поиск героев
-document.getElementById("search").addEventListener("input", renderHeroes);
+// 2. ЗАГРУЗКА ИЗ ГУГЛ ТАБЛИЦЫ (Фоновая)
+async function loadHeroes() {
+    const statusEl = document.getElementById("syncStatus");
+    statusEl.innerText = "Синхронизация...";
+    statusEl.classList.add("loading-pulse");
 
-// Рендер списка героев (только опубликованные)
+    try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        
+        // Сортировка по имени
+        ALL_HEROES = data.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        
+        // Сохраняем в кэш
+        localStorage.setItem('csc_cache', JSON.stringify(ALL_HEROES));
+        
+        renderHeroes();
+        renderAdminLists();
+        
+        statusEl.innerText = "Данные актуальны";
+        statusEl.classList.remove("loading-pulse");
+        document.getElementById("loadingMsg").classList.add("hidden");
+    } catch (e) {
+        console.error("Ошибка сети:", e);
+        statusEl.innerText = "Оффлайн режим";
+    }
+}
+
+// 3. ОТРИСОВКА (Только опубликованные)
 function renderHeroes() {
     const list = document.getElementById("heroesPage");
-    list.innerHTML = "";
     const search = document.getElementById("search").value.toLowerCase();
+    list.innerHTML = "";
 
-    let filtered = ALL_HEROES.filter(hero => hero.status === "published" && hero.name && hero.name.toLowerCase().startsWith(search));
+    const filtered = ALL_HEROES.filter(h => 
+        h.status === "published" && 
+        (h.name || "").toLowerCase().includes(search)
+    );
 
-    filtered.sort((a,b)=>a.name.localeCompare(b.name));
-
-    if(filtered.length === 0){
-        list.innerHTML = `<p class="text-center col-span-2 text-gray-400">Ничего не найдено</p>`;
+    if (filtered.length === 0) {
+        list.innerHTML = `<p class="col-span-2 text-center text-gray-500 mt-10">Герои не найдены</p>`;
         return;
     }
 
-    filtered.forEach(hero=>{
+    filtered.forEach(hero => {
         list.innerHTML += `
-            <div class="glass p-3 rounded-xl text-center">
-                <img src="${hero.icon}" class="w-16 h-16 mx-auto mb-2 rounded">
-                <div class="font-bold">${hero.name}</div>
-                <div class="text-xs text-cyan-400">${hero.class_type}</div>
+            <div class="glass p-3 rounded-xl text-center border-b-2 border-cyan-500/30">
+                <img src="${hero.icon || 'https://via.placeholder.com/64'}" class="w-16 h-16 mx-auto mb-2 rounded-lg shadow-lg">
+                <div class="font-bold text-sm">${hero.name}</div>
+                <div class="text-[10px] text-cyan-400 uppercase tracking-wider">${hero.class_type || 'Боец'}</div>
             </div>
         `;
     });
 }
 
-// Рендер админ-панели
+// 4. СПИСКИ В АДМИНКЕ
 function renderAdminLists() {
     const pub = document.getElementById("adminPublished");
     const draft = document.getElementById("adminDrafts");
     pub.innerHTML = ""; draft.innerHTML = "";
 
-    ALL_HEROES.forEach(hero=>{
-        const card = `<div onclick="editHero(${hero.id})" class="glass p-2 text-center text-sm cursor-pointer">${hero.name||"Без имени"}</div>`;
-        if(hero.status==="published") pub.innerHTML += card;
+    ALL_HEROES.forEach(hero => {
+        const card = `
+            <div onclick="editHero(${hero.id})" class="glass p-2 text-center text-xs cursor-pointer hover:bg-white/10 transition">
+                ${hero.name || "Без имени"}
+            </div>
+        `;
+        if (hero.status === "published") pub.innerHTML += card;
         else draft.innerHTML += card;
     });
 }
 
-// Редактирование
-function editHero(id){
-    const hero = ALL_HEROES.find(h=>h.id==id);
-    if(!hero) return;
-    currentHeroId = hero.id;
+// 5. ВЫБОР ГЕРОЯ ДЛЯ РЕДАКТИРОВАНИЯ
+function editHero(id) {
+    const hero = ALL_HEROES.find(h => h.id == id);
+    if (!hero) return;
+    
+    currentHeroId = hero.id; // Запоминаем ID, чтобы обновить ту же строку
 
     document.getElementById("h_name").value = hero.name || "";
     document.getElementById("h_class").value = hero.class_type || "";
@@ -143,22 +176,15 @@ function editHero(id){
     document.getElementById("h_ability").value = hero.ability_name || "";
     document.getElementById("h_video").value = hero.video || "";
     document.getElementById("h_desc").value = hero.desc || "";
+    
+    // Скролл вверх к форме
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Загрузка героев
-async function loadHeroes(){
-    try {
-        const res = await fetch(API_URL);
-        ALL_HEROES = await res.json();
-    } catch(e){}
-    renderHeroes();
-    renderAdminLists();
-}
-
-// Сохранение
-async function saveHero(status){
+// 6. СОХРАНЕНИЕ (БЕЗ ДУБЛЕЙ)
+async function saveHero(status) {
     const payload = {
-        id: currentHeroId,
+        id: currentHeroId, // Если null — создаст новую строку, если есть ID — обновит старую
         name: document.getElementById("h_name").value,
         class_type: document.getElementById("h_class").value,
         hp: document.getElementById("h_hp").value,
@@ -168,40 +194,75 @@ async function saveHero(status){
         ability_name: document.getElementById("h_ability").value,
         video: document.getElementById("h_video").value,
         desc: document.getElementById("h_desc").value,
-        status
+        status: status
     };
 
-    try{
-        const res = await fetch(API_URL,{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify(payload)
+    if (!payload.name) return alert("Введите имя героя!");
+
+    const btn = status === 'published' ? document.getElementById("btnPub") : document.getElementById("btnDraft");
+    const originalText = btn.innerText;
+    btn.innerText = "⌛ Ждите...";
+    btn.disabled = true;
+
+    try {
+        // Используем POST без сложных заголовков, чтобы избежать CORS
+        await fetch(API_URL, {
+            method: "POST",
+            mode: "no-cors", 
+            body: JSON.stringify(payload)
         });
-        const data = await res.json();
-        if(data.id) currentHeroId = data.id;
-        alert("Сохранено: "+data.status);
-        await loadHeroes();
-    } catch(err){
-        alert("Ошибка: "+err);
+
+        // После отправки ждем немного и обновляем данные
+        setTimeout(async () => {
+            await loadHeroes();
+            btn.innerText = originalText;
+            btn.disabled = false;
+            alert("Успешно: " + (status === 'published' ? 'Опубликовано' : 'В черновиках'));
+        }, 1200);
+
+    } catch (err) {
+        alert("Ошибка: " + err);
+        btn.disabled = false;
+        btn.innerText = originalText;
     }
 }
 
-// Очистка формы
-function clearForm(){
-    document.querySelectorAll("#adminPage input,#adminPage textarea").forEach(el=>el.value="");
-    currentHeroId=null;
+// Очистка
+function clearForm() {
+    document.querySelectorAll("#adminPage input, #adminPage textarea").forEach(el => el.value = "");
+    currentHeroId = null;
 }
 
-// Старт
+// Навигация
+function showPage(page) {
+    document.getElementById("heroesPage").classList.add("hidden");
+    document.getElementById("adminPage").classList.add("hidden");
+    document.getElementById("discussPage").classList.add("hidden");
+
+    if(page==="heroes") document.getElementById("heroesPage").classList.remove("hidden");
+    if(page==="admin") document.getElementById("adminPage").classList.remove("hidden");
+    if(page==="discuss") document.getElementById("discussPage").classList.remove("hidden");
+}
+
+document.getElementById("search").addEventListener("input", renderHeroes);
+
+// Запуск
+loadFromCache(); // Сначала кэш
+loadHeroes();    // Потом запрос к Google
 showPage("heroes");
-loadHeroes();
+
 </script>
 
-<!-- Нижнее меню -->
-<div class="fixed bottom-0 left-0 right-0 bg-[#020617] border-t border-slate-800 flex justify-around p-2">
-    <button onclick="showPage('heroes')" class="text-cyan-400">Герои</button>
-    <button onclick="showPage('discuss')" class="text-gray-400">Обсуждение</button>
-    <button onclick="showPage('admin')" class="text-red-400">Админ</button>
+<div class="fixed bottom-0 left-0 right-0 bg-[#020617] border-t border-slate-800 flex justify-around p-3 z-50">
+    <button onclick="showPage('heroes')" class="flex flex-col items-center text-cyan-400">
+        <span class="text-xs">Герои</span>
+    </button>
+    <button onclick="showPage('discuss')" class="flex flex-col items-center text-gray-400">
+        <span class="text-xs">Обсуждение</span>
+    </button>
+    <button onclick="showPage('admin')" class="flex flex-col items-center text-red-400">
+        <span class="text-xs">Админ</span>
+    </button>
 </div>
 
 </body>
