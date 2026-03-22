@@ -65,8 +65,12 @@
         <button id="btnDraft" onclick="saveHero('draft')" class="bg-yellow-600 px-3 py-3 rounded-lg w-full font-bold">В черновик</button>
         <button id="btnPub" onclick="saveHero('published')" class="bg-cyan-600 px-3 py-3 rounded-lg w-full font-bold">Опубликовать</button>
     </div>
-    <button onclick="clearForm()" class="text-gray-400 mt-4 w-full text-sm">Очистить форму</button>
-
+    
+    <div class="flex gap-2 mt-4">
+        <button id="btnDelete" onclick="deleteHero()" class="bg-red-900/50 border border-red-500 text-red-500 py-2 rounded-lg w-full text-sm font-bold hidden">Удалить карточку</button>
+        <button onclick="clearForm()" class="bg-slate-800 text-gray-400 py-2 rounded-lg w-full text-sm">Очистить форму</button>
+    </div>
+    
     <h3 class="mt-8 mb-2 font-bold text-cyan-400 border-b border-cyan-900/50 pb-1">Опубликованные</h3>
     <div id="adminPublished" class="grid grid-cols-2 gap-2"></div>
 
@@ -179,6 +183,8 @@ function editHero(id) {
     
     // Скролл вверх к форме
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Появление кнопки удалить
+    document.getElementById("btnDelete").classList.remove("hidden");
 }
 
 // 6. СОХРАНЕНИЕ (БЕЗ ДУБЛЕЙ)
@@ -227,11 +233,45 @@ async function saveHero(status) {
         btn.innerText = originalText;
     }
 }
+
+async function deleteHero() {
+    if (!currentHeroId) return;
+    
+    const heroName = document.getElementById("h_name").value;
+    if (!confirm(`Вы точно хотите удалить героя "${heroName}"? Это действие нельзя отменить!`)) return;
+
+    const btn = document.getElementById("btnDelete");
+    btn.innerText = "Удаление...";
+    btn.disabled = true;
+
+    try {
+        await fetch(API_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({
+                id: currentHeroId,
+                action: "delete" // Посылаем сигнал таблице, что это именно удаление
+            })
+        });
+
+        setTimeout(async () => {
+            await loadHeroes(); // Обновляем данные, чтобы удаленный герой исчез
+            clearForm(); // Очищаем форму
+            alert("Герой успешно удален!");
+        }, 1500);
+
+    } catch (e) {
+        alert("Ошибка при удалении");
+        btn.disabled = false;
+        btn.innerText = "Удалить карточку";
+    }
+}
     
 // Очистка
 function clearForm() {
     document.querySelectorAll("#adminPage input, #adminPage textarea").forEach(el => el.value = "");
     currentHeroId = null;
+    document.getElementById("btnDelete").classList.add("hidden");
 }
 
 // Навигация
