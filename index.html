@@ -106,7 +106,7 @@ async function loadHeroes() {
         const res = await fetch(API_URL + "?t=" + Date.now());
         const data = await res.json();
         
-        ALL_HEROES = data.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        ALL_HEROES = Array.isArray(data) ? data.sort((a, b) => (a.name || "").localeCompare(b.name || "")) : [];
         localStorage.setItem('csc_cache', JSON.stringify(ALL_HEROES));
         
         renderHeroes();
@@ -241,7 +241,8 @@ async function deleteHero() {
     if (!confirm(`Удалить "${name}" навсегда?`)) return;
 
     const delBtn = document.getElementById("btnDelete");
-    delBtn.innerText = "🗑️ Удаление...";
+    const originalText = "Удалить карточку";
+    delBtn.innerText = "🗑️ Чик-чик удаление...";
     delBtn.disabled = true;
 
     try {
@@ -254,21 +255,6 @@ async function deleteHero() {
             })
         });
 
-        setTimeout(async () => {
-            await loadHeroes();
-            delBtn.innerText = "Удалить карточку";
-            delBtn.disabled = false;
-            clearForm();
-            alert("Удалено!");
-        }, 1500);
-
-    } catch (e) {
-        delBtn.innerText = "Удалить карточку";
-        delBtn.disabled = false;
-        alert("Ошибка удаления");
-    }
-}+
-        // ПРИНУДИТЕЛЬНЫЙ СБРОС СОСТОЯНИЯ
         setTimeout(async () => {
             await loadHeroes();
             delBtn.innerText = originalText;
