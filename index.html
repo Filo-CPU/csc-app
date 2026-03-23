@@ -131,7 +131,7 @@ function renderHeroes() {
     list.innerHTML = "";
 
     const filtered = ALL_HEROES.filter(h => 
-        String(h.status).toLowerCase() === "published" && 
+        String(h.status).toLowerCase().trim() === "published" && 
         (h.name || "").toLowerCase().includes(search)
     );
 
@@ -177,7 +177,7 @@ function editHero(id) {
     const hero = ALL_HEROES.find(h => h.id == id || `name-${h.name}` === id);
     if (!hero) return;
     
-    currentHeroId = hero.id; // Запоминаем ID, чтобы обновить ту же строку
+    currentHeroId = hero.id ? Number(hero.id) : null; // Запоминаем ID, чтобы обновить ту же строку
 
     document.getElementById("h_name").value = hero.name || "";
     document.getElementById("h_class").value = hero.class_type || "";
@@ -211,9 +211,10 @@ async function saveHero(status) {
         await fetch(API_URL, {
             method: "POST",
             mode: "no-cors",
+            if (!currentHeroId) return;
             body: JSON.stringify({
-                action: "save", // Добавили действие
-                id: currentHeroId, // Если null - создаст нового, если есть - обновит
+                action: "delete",
+                id: Number(currentHeroId) // Если null - создаст нового, если есть - обновит
                 name: name,
                 class_type: document.getElementById("h_class").value,
                 hp: document.getElementById("h_hp").value,
